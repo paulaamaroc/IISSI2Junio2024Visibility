@@ -1,3 +1,4 @@
+import { Sequelize } from 'sequelize'
 import { Restaurant, Product, RestaurantCategory, ProductCategory } from '../models/models.js'
 
 const index = async function (req, res) {
@@ -50,11 +51,20 @@ const create = async function (req, res) {
 const show = async function (req, res) {
   // Only returns PUBLIC information of restaurants
   try {
-    const restaurant = await Restaurant.findByPk(req.params.restaurantId, {
+    const restaurant = await
+    Restaurant.findByPk(req.params.restaurantId, {
       attributes: { exclude: ['userId'] },
       include: [{
         model: Product,
         as: 'products',
+        where: {
+          // visibleUntil = null OR visibleUntil > fecha actual
+          visibleUntil: {
+            [Sequelize.Op.or]: [
+              { [Sequelize.Op.eq]: null },
+              { [Sequelize.Op.gt]: new Date() }]
+          }
+        },
         include: { model: ProductCategory, as: 'productCategory' }
       },
       {
@@ -69,6 +79,40 @@ const show = async function (req, res) {
     res.status(500).send(err)
   }
 }
+
+/*
+const show = async function (req, res) {
+  // Only returns PUBLIC information of restaurants
+  try {
+    const restaurant = await Restaurant.findByPk(req.params.restaurantId, {
+      attributes: { exclude: ['userId'] },
+      include: [{
+        model: Product,
+        as: 'products',
+        where: {
+          // visibleUntil = null OR visibleUntil > fechaActual
+          visibleUntil: {
+            [Sequelize.Op.or]: [
+              { [Sequelize.Op.eq]: null },
+              { [Sequelize.Op.gt]: new Date() }
+            ]
+          }
+        },
+        include: { model: ProductCategory, as: 'productCategory' }
+      },
+      {
+        model: RestaurantCategory,
+        as: 'restaurantCategory'
+      }],
+      order: [[{ model: Product, as: 'products' }, 'order', 'ASC']]
+    }
+    )
+    res.json(restaurant)
+  } catch (err) {
+    res.status(500).send(err)
+  }
+}
+  */
 
 const update = async function (req, res) {
   try {

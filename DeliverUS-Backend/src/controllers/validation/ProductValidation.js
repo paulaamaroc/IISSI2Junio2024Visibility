@@ -14,15 +14,39 @@ const checkRestaurantExists = async (value, { req }) => {
     return Promise.reject(new Error(err))
   }
 }
+
+const checkVisibleAfter = async (value, { req }) => {
+  try {
+    const currentDate = new Date()
+    if (value && value < currentDate) {
+      return Promise.reject(new Error('The visibility must finish after the current date'))
+    } else {
+      return Promise.resolve()
+    }
+  } catch (err) {
+    return Promise.reject(new Error(err))
+  }
+}
+
+const checkAvailabilityVisibility = async (value, { req }) => {
+  if (value === false && req.body.visibleUntil) {
+    return Promise.reject(new Error('Cannot set availability and visibility at the same time'))
+  } else {
+    return Promise.resolve()
+  }
+}
+
 const create = [
   check('name').exists().isString().isLength({ min: 1, max: 255 }).trim(),
   check('description').optional({ checkNull: true, checkFalsy: true }).isString().isLength({ min: 1 }).trim(),
   check('price').exists().isFloat({ min: 0 }).toFloat(),
   check('order').default(null).optional({ nullable: true }).isInt().toInt(),
   check('availability').optional().isBoolean().toBoolean(),
+  check('availability').custom(checkAvailabilityVisibility),
   check('productCategoryId').exists().isInt({ min: 1 }).toInt(),
   check('restaurantId').exists().isInt({ min: 1 }).toInt(),
   check('restaurantId').custom(checkRestaurantExists),
+  check('visibleUntil').optional().isDate().toDate().custom(checkVisibleAfter),
   check('image').custom((value, { req }) => {
     return checkFileIsImage(req, 'image')
   }).withMessage('Please upload an image with format (jpeg, png).'),
@@ -37,8 +61,10 @@ const update = [
   check('price').exists().isFloat({ min: 0 }).toFloat(),
   check('order').default(null).optional({ nullable: true }).isInt().toInt(),
   check('availability').optional().isBoolean().toBoolean(),
+  check('availability').custom(checkAvailabilityVisibility),
   check('productCategoryId').exists().isInt({ min: 1 }).toInt(),
   check('restaurantId').not().exists(),
+  check('visibleUntil').custom(checkVisibleAfter),
   check('image').custom((value, { req }) => {
     return checkFileIsImage(req, 'image')
   }).withMessage('Please upload an image with format (jpeg, png).'),
